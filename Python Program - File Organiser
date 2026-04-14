@@ -1,0 +1,124 @@
+import os
+import shutil
+from datetime import datetime
+
+def create_folder(base_path, folder_name):
+    folder_path = os.path.join(base_path, folder_name)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    return folder_path
+
+def get_category(extension):
+    categories = {
+        "Images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+        "Documents": [".pdf", ".docx", ".doc", ".txt", ".pptx", ".xlsx", ".xls", ".csv"],
+        "Videos": [".mp4", ".mkv", ".avi", ".mov", ".wmv"],
+        "Music": [".mp3", ".wav", ".aac", ".flac"],
+        "Archives": [".zip", ".rar", ".7z", ".tar", ".gz"],
+        "Programs": [".exe", ".msi", ".bat"],
+        "Code": [".py", ".cpp", ".c", ".java", ".js", ".html", ".css"]
+    }
+    for category, ext_list in categories.items():
+        if extension.lower() in ext_list:
+            return category
+    return "Others"
+
+def get_file_size_category(file_path):
+    size = os.path.getsize(file_path)
+    if size < 1024 * 1024:
+        return "Small_Files"
+    elif size < 100 * 1024 * 1024:
+        return "Medium_Files"
+    else:
+        return "Large_Files"
+
+def get_date_folder(file_path):
+    timestamp = os.path.getmtime(file_path)
+    date = datetime.fromtimestamp(timestamp)
+    return date.strftime("%Y-%m")
+
+def rename_if_exists(destination, file_name):
+    base, ext = os.path.splitext(file_name)
+    counter = 1
+    new_name = file_name
+    while os.path.exists(os.path.join(destination, new_name)):
+        new_name = f"{base}_{counter}{ext}"
+        counter += 1
+    return new_name
+
+def scan_files(base_path):
+    file_list = []
+    for root, dirs, files in os.walk(base_path):
+        for file in files:
+            file_list.append(os.path.join(root, file))
+    return file_list
+
+def organize_files(base_path):
+    if not os.path.exists(base_path):
+        print("Path does not exist")
+        return
+
+    files = os.listdir(base_path)
+
+    for file in files:
+        file_path = os.path.join(base_path, file)
+
+        if os.path.isfile(file_path):
+            _, ext = os.path.splitext(file)
+
+            category = get_category(ext)
+            size_category = get_file_size_category(file_path)
+            date_folder = get_date_folder(file_path)
+
+            category_path = create_folder(base_path, category)
+            size_path = create_folder(category_path, size_category)
+            date_path = create_folder(size_path, date_folder)
+
+            new_name = rename_if_exists(date_path, file)
+
+            try:
+                shutil.move(file_path, os.path.join(date_path, new_name))
+                print(f"Moved: {file} -> {category}/{size_category}/{date_folder}")
+            except Exception as e:
+                print(f"Error moving {file}: {e}")
+
+def display_summary(base_path):
+    total_files = 0
+    total_folders = 0
+
+    for root, dirs, files in os.walk(base_path):
+        total_files += len(files)
+        total_folders += len(dirs)
+
+    print("Summary:")
+    print(f"Total folders: {total_folders}")
+    print(f"Total files: {total_files}")
+
+def show_menu():
+    print("1. Organize Files")
+    print("2. Scan All Files")
+    print("3. Show Summary")
+    print("4. Exit")
+
+def main():
+    path = input("Enter folder path: ")
+
+    while True:
+        show_menu()
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            organize_files(path)
+        elif choice == "2":
+            files = scan_files(path)
+            for f in files:
+                print(f)
+        elif choice == "3":
+            display_summary(path)
+        elif choice == "4":
+            break
+        else:
+            print("Invalid choice")
+
+if __name__ == "__main__":
+    main()
